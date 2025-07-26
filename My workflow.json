@@ -1,0 +1,261 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "post creater",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "post  topic"
+            },
+            {
+              "fieldLabel": "target audience"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ef76fc81-eb96-4745-8851-03dc1e3c282f",
+      "name": "On form submission",
+      "webhookId": "ba0efd62-4268-4138-970c-46c954d875e3"
+    },
+    {
+      "parameters": {
+        "model": "mistralai/mistral-7b-instruct",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        256,
+        224
+      ],
+      "id": "8a0ec47e-058b-4268-9335-ad850460347f",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=topic of research: {{ $json['post  topic'] }}\ntarget audience:{{ $json['target audience'] }}",
+        "options": {
+          "systemMessage": "Overview\nYou are an AI agent specialized in creating professional, educational, and engaging LinkedIn posts based on any topic provided by the user.\n\nObjectives\nAlways begin by conducting a real-time search using the Tavily tool to gather the most accurate, up-to-date information on the topic. The post should be written to appeal to the provided target audience.\n\nBased on your research, generate a well-structured LinkedIn post that:\n\nStarts with an engaging hook\n\nProfessional in tone\n\nClear and easy to read\n\nEducational and insightful\n\nLight on emojis (use only when highly relevant and minimal)\n\nIncludes proper source attribution (e.g., “according to [source]”)\n\nContains relevant hashtags to improve visibility\n\nEnds with a clear call to action (e.g., asking for thoughts, feedback, or shares)\n\nOutput Instructions\nYour ONLY output should be the final LinkedIn post text.\n\nDo not include explanations, notes, or anything beyond the post itself.\n\nExample Workflow\nReceive a topic (e.g., \"The ROI of warehouse automation\")\n\nUse Tavily to search and gather recent information or case studies\nDraft a LinkedIn post using that research\nFormat it with source citations, clean structure, optional hashtags, and a call to action"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "336170b4-0a35-4787-880a-2fa2106f7239",
+      "name": "research  agent  "
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=LinkedIn post:{{ $json.output }}",
+        "options": {
+          "systemMessage": "Overview\nYou are an AI agent that transforms LinkedIn posts into visual prompt descriptions for generating graphic marketing materials. These visuals are designed to be paired with the post on LinkedIn, helping communicate the message in a visually engaging, brand-aligned way.\n\nObjective\nRead and analyze the given LinkedIn post.\n\nIdentify the key message, insight, or takeaway from the post.\n\nCreate a clean and compelling graphic prompt that can be used with a text-to-image generation model.\n\nThe result should be:\n\nA marketing-style graphic – not a literal scene or nonsensical photo.\n\nVisually supports or illustrates the key idea in the post.\n\nLooks appropriate for use in a professional LinkedIn feed.\n\nFeels polished, modern, and engaging.\n\nOutput Instructions\nDo not put the final image prompt. Do not output quotation marks.\n\nNever reprint or rephrase the LinkedIn post.\n\nFormat clearly: Image prompt: → then just the image prompt.\n\nOnly output the image prompt text – don’t say “Here’s your prompt.”\n\nMake sure spelling and grammar in the output post are correct.\n\nStyle Guidelines\nThink like a brand designer or marketing creative.\n\nUse terms like: infographic, charts, icons, diagrams, clean colors, modern typography, subtle effects, UI, typography elements (described, not rendered), etc.\n\nGood example structure:\n\n\"Modern flat-style infographic...\"\n\n\"Split screen design,\" \"Header\" with bold text and subtle background illustration...\"\n\n\"Inspired by modern B2B branding AI image tools – your prompt should guide this.\"\n\nExample Prompt\nA modern flat-style graphic showing a human brain connected to mechanical gears, representing the fusion of AI and automation.\nPastel background, soft gradients, clean sans-serif text placement space at the top.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "66b28cbc-f163-41be-9275-999beadecc03",
+      "name": "image agent "
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            },
+            {
+              "name": "Accept",
+              "value": "image/png"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inputs",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "image.png"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1024,
+        0
+      ],
+      "id": "f9051698-c73c-41ef-894a-8bd89f9914e7",
+      "name": "image  generator "
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"{{ $json['post  topic'] }}\",\n  \"auto_parameters\": false,\n  \"topic\": \"general\",\n  \"search_depth\": \"basic\",\n  \"chunks_per_source\": 3,\n  \"max_results\": 1,\n  \"time_range\": null,\n  \"days\": 7,\n  \"start_date\": \"2025-02-09\",\n  \"end_date\": \"2000-01-28\",\n  \"include_answer\": true,\n  \"include_raw_content\": true,\n  \"include_images\": false,\n  \"include_image_descriptions\": false,\n  \"include_favicon\": false,\n  \"include_domains\": [],\n  \"exclude_domains\": [],\n  \"country\": null\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        384,
+        224
+      ],
+      "id": "74154781-3d45-481e-bb40-6d123d50ee7b",
+      "name": "tavliy"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1024,
+        176
+      ],
+      "id": "6df8f36c-90da-411a-9622-ba07eb4012fa",
+      "name": "Send a message",
+      "webhookId": "7cf4fcc9-43fe-47de-b405-cb6019a3fec8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "s7U4WYJjodZABRWG",
+          "name": "Gmail account"
+        }
+      },
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "research  agent  ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "research  agent  ",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "image agent ",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "research  agent  ": {
+      "main": [
+        [
+          {
+            "node": "image agent ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "image agent ": {
+      "main": [
+        [
+          {
+            "node": "image  generator ",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "image  generator ": {
+      "main": [
+        []
+      ]
+    },
+    "tavliy": {
+      "ai_tool": [
+        [
+          {
+            "node": "research  agent  ",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "78dd1495-33b2-4b67-b02e-ed3fe5c95649",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6f0702f0ac8d1be4a4981ad611e2f2a68863a9dab61a6c412e8415df7494e85c"
+  },
+  "id": "D42uigFxZdv40AYZ",
+  "tags": []
+}
